@@ -14,13 +14,13 @@ source paramparser.sh
 
 ## Exemple:
 ## Create your arguments:
-optAdd  'config' 'CONFIG_FILE' 'Input config file' ''               # Add an option which requires an argument. This line create 'config' variable.
+optAdd  'config' 'CONFIG_FILE' 'Input config file' ''                # Add an option which requires an argument. This line create 'config' variable.
 optAddFlag 'verbose' 'Displays more descriptive information than the default output.'  # Add a flag option. This line create boolean 'verbose' variable.
 optAddPos 'output_file'  'Tabular file with first column is an id'   # Add a positional argument.
 optAddPos 'input_file' 'Path to output file'  '+'                    # Add an other positional argument '+' means create 'output_file' array and store the last positionals arguments.
 
 # Use optParse function to parse users argument.
-optParse $@
+optParse "$@"
 
 # Display user value
 echo 'config :' $config

@@ -23,7 +23,7 @@ function optAdd {
     OPTION_NAMES[$i]=$1
     OPTION_ARGS[$i]=$2
     OPTION_HELPS[$i]=$3
-    eval $1'='$4
+    eval $1"='"$4"'"
 }
 
 
@@ -57,7 +57,18 @@ function optAddPos {
     declare -ir i=${#OPTION_POSITIONALS_NAMES[@]}
     OPTION_POSITIONALS_NAMES[$i]=$1
     OPTION_POSITIONALS_HELPS[$i]=$2
+    declare -ir prev_i=$(($i - 1))
+    
+    if [[ "$prev_i" -ge "0" && ${OPTION_POSITIONALS_MULTIPLICITYS[$prev_i]} != '1' ]]; then
+        echo -e "\e[1;31mParamparser Programming Error:\e[0m You can't add positional argument after an other with '*' or '+' multiplicity." 1>&2
+        exit 1;
+    fi
+
     if [[ $# == 3 ]]; then
+        if [[ "$3" != "1" && "$3" != "+" && "$3" != "*"  ]]; then
+            echo -e "\e[1;31mParamparser Programming Error:\e[0m optAddPos argument 3 expected '1', '*' or '+'." 1>&2
+            exit 1;
+        fi
         OPTION_POSITIONALS_MULTIPLICITYS[$i]=$3 
     else
         OPTION_POSITIONALS_MULTIPLICITYS[$i]='1'
@@ -159,13 +170,13 @@ function optParse {
                     eval $var_name'=true'     
                 else
                     (( ++i ))
-                    eval $var_name'='${!i}  
+                    eval $var_name"='"${!i}"'"  
                 fi
             else
                 var_name=${OPTION_POSITIONALS_NAMES[ $pos_args_i ]}
                 if [[ "${OPTION_POSITIONALS_MULTIPLICITYS[ $pos_args_i ]}" == "1" ]]; then
-                    eval $var_name'='${!i} 
-                    ((++pos_args_i))    
+                    eval $var_name"='"${!i}"'"
+                    ((++pos_args_i))
                 else
                     pos_args="$pos_args '"${!i}"'"
                 fi
@@ -175,13 +186,13 @@ function optParse {
     done
 
     # Test number of positionals arguments given.
-    if [[ ${#OPTION_POSITIONALS_MULTIPLICITYS[@]} > 0 ]]; then
+    if [[ ${#OPTION_POSITIONALS_MULTIPLICITYS[@]} -gt 0 ]]; then
         declare -i last_indice=$((${#OPTION_POSITIONALS_MULTIPLICITYS[@]} - 1))
         declare last_multiplicity="${OPTION_POSITIONALS_MULTIPLICITYS[ $last_indice ]}"
         var_name="${OPTION_POSITIONALS_NAMES[ $last_indice ]}"
 
         if [[ "$last_multiplicity" == "+" ]]; then
-            if [[ $nb_pos_args_given < ${#OPTION_POSITIONALS_MULTIPLICITYS[@]} ]]; then
+            if [[ $nb_pos_args_given -lt ${#OPTION_POSITIONALS_MULTIPLICITYS[@]} ]]; then
                 echo 'error: Too few arguments'
                 echo "try '$0 --help' for more explanation"
                 exit 1   
@@ -190,7 +201,7 @@ function optParse {
 
         else 
             if [[ "$last_multiplicity" == "*" ]]; then
-                    if [[ $nb_pos_args_given < $(( ${#OPTION_POSITIONALS_MULTIPLICITYS[@]} - 1 )) ]]; then
+                    if [[ $nb_pos_args_given -lt $(( ${#OPTION_POSITIONALS_MULTIPLICITYS[@]} - 1 )) ]]; then
                         echo 'error: Too few arguments'
                         echo "try '$0 --help' for more explanation"
                         exit 1   

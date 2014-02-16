@@ -1,4 +1,4 @@
-paramparser
+Paramparser
 ===========
 
 Arguments parser for bash
@@ -6,22 +6,70 @@ Arguments parser for bash
 Exemple
 =======
 
-source paramparser.sh  # Include paramparser.
+## 1. Include paramparser.sh
 
-# Adding optionals arguments:
-optAdd  'config' 'CONFIG_FILE' 'Input config file' ''                # Add an option which requires an argument. This line create 'config' variable.
-optAddFlag 'verbose' 'Displays more descriptive information than the default output.'  # Add a flag option. This line create boolean 'verbose' variable.
+```bash
+source paramparser.sh  
+```
 
-# Adding positionals arguments
-optAddPos 'output_file'  'Tabular file with first column is an id'   # Add a positional argument.
-optAddPos 'input_file' 'Path to output file'  '+'                    # Add an other positional argument '+' means create 'output_file' array and store the last positionals arguments.
+## 2. Adding optionals arguments and positionals arguments
 
-# Use optParse function to parse users argument.
+```bash
+# Add optionals arguments.
+optAdd  'config' 'CONFIG_FILE' 'Input config file' ''
+optAddFlag 'verbose' 'Displays more descriptive information than the default output.'  
+
+# Add positionals arguments.
+optAddPos 'output_file'  'Tabular file with first column is an id'
+optAddPos 'input_file' 'Path to output file'  '+'                    
+```
+
+## 3. Getting user parameters
+
+```bash
+# Use optParse function to parse users arguments.
 optParse "$@"
 
-
-# Getting user parameters
+# OptParse has initialised variables specified with optAdd, optAddFlag or optAddPos functions.
 echo 'config :' $config
 echo 'verbose :' $verbose
 echo 'positional argument 1 :' $output_file
 echo 'last positionals arguments  :' "${input_file[@]}"
+```
+
+## 4. It is done ! Try your program :-)
+
+```
+$ ./exemple.sh  -h
+USAGE
+	[ --config --verbose ] output_file input_file [input_file]...
+
+
+POSITIONALS ARGUMENTS
+	output_file
+		Tabular file with first column is an id
+
+
+	input_file
+		Path to output file
+
+
+OPTION
+	--config CONFIG_FILE
+		Input config file
+
+
+	--verbose 
+		Displays more descriptive information than the default output.
+
+
+	-h --help
+		Display this help and exit.
+```
+```
+$ ./exemple.sh  --config my_config  foo  bar1 bar2
+config : my_config
+verbose : false
+positional argument 1 : foo
+last positionals arguments  : bar1 bar2
+```

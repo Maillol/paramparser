@@ -257,13 +257,22 @@ function optParse {
 
 if [[ "$0" =~ paramparser.sh$ ]]; then
     # Display publics functions (privates functions startswith by _).
-    awk 'BEGIN{ flag=0 }
+    awk -v func_name="$1" 'BEGIN{ flag=0 }
          {  
-         if (substr($0,1,13) == "#=== FUNCTION" && substr($0,15,1) != "_"  )
-             {flag=1} 
+         if (substr($0,1,13) == "#=== FUNCTION" && 
+             substr($0,15,1) != "_" )
+            {
+            if ( func_name == "" )
+                {flag="1"}
+            else if ( substr( $0, 15, length(func_name) ) &&
+                      substr( $0, 15 + length(func_name), 1 ) == " " )
+                {flag="1"}
+            }
          else if (substr($0,1,5) == "#====" && flag == "1" )
              {flag=0;print$0"\n\n"}; 
          if ( flag == "1" ) 
             {print $0}  
-         }' $0
+         }' $0        
 fi
+
+

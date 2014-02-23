@@ -3,27 +3,41 @@
 declare -a OPTION_NAMES
 declare -a OPTION_ARGS
 declare -a OPTION_HELPS
+declare -a OPTION_MULTIPLICITYS
 declare -a OPTION_POSITIONALS_NAMES
 declare -a OPTION_POSITIONALS_HELPS
 declare -a OPTION_POSITIONALS_MULTIPLICITYS
 
 
-#=== FUNCTION optAdd =========================================================
-# USAGE: optAdd opt_name opt_args opt_help opt_defaut
+#=== FUNCTION optAdd ==========================================================
+# USAGE: optAdd name args help multiplicity [defaut]
 # DESCRIPTION: add option to parseur.
 #             
 # PARAMETERS:
-#    opt_name - Name of option without '--' prefix
-#    opt_args - Name of args
-#    opt_help - in line help.
-#    opt_defaut - default value must be false for flag
-#=============================================================================
+#    name - Name of option without '--' prefix
+#    args - Name of args displaying in generated help
+#    help - in line help.
+#    multiplicity - if multiplicity is '?' the <name> variable will be created
+#                   if multiplicity is '*' the <name> array will be created
+#                   and the commande line will contain several time this option.
+#    defaut - default value of the variable <name> (ignored if multiplicity is 
+#             '*')
+#==============================================================================
 function optAdd {
     declare -ir i=${#OPTION_NAMES[@]}
     OPTION_NAMES[$i]=$1
     OPTION_ARGS[$i]=$2
     OPTION_HELPS[$i]=$3
-    eval $1"='"$4"'"
+    if [[ "$4" != "?" && "$4" != "*" ]]; then
+        echo -e "\e[1;31mParamparser Programming Error:\e[0m optAdd argument 4 expected '?' or '*'." 1>&2
+        exit 1
+    fi
+    OPTION_MULTIPLICITYS[$i]=$4
+    if [[ $# == 5 && $4 == '?' ]]; then
+        eval $1"='"$5"'"
+    else
+        eval $1"=''"
+    fi
 }
 
 
@@ -158,6 +172,13 @@ function optParse {
     declare -i nb_pos_args_given=0 ;
     declare pos_args=''
     declare var_name ;
+    declare -A opt_with_star_multiplicity
+
+    for (( i = 0; i < ${#OPTION_NAMES[@]}; i++ )); do
+        if [[ ${OPTION_MULTIPLICITYS[$i]} == '*' ]]; then
+            opt_with_star_multiplicity[ ${OPTION_NAMES[$i]} ]='( '
+        fi
+    done
 
     for (( i = 1; i <= ${#}; i++ )); do
         if [[ "${!i}" == "--help" || "${!i}" == "-h" ]]; then
@@ -170,7 +191,11 @@ function optParse {
                     eval $var_name'=true'     
                 else
                     (( ++i ))
-                    eval $var_name"='"${!i}"'"  
+                    if [[ ${OPTION_MULTIPLICITYS[ $opt_i ]} == '?' ]]; then
+                        eval $var_name"='"${!i}"'"
+                    else
+                        opt_with_star_multiplicity[ ${OPTION_NAMES[$opt_i]} ]=${opt_with_star_multiplicity[ ${OPTION_NAMES[$opt_i]} ]}"'"${!i}"' "
+                    fi
                 fi
             else
                 var_name=${OPTION_POSITIONALS_NAMES[ $pos_args_i ]}
@@ -184,6 +209,14 @@ function optParse {
             fi
         fi
     done
+
+    # Eval array for option with * multiplicity
+    for (( i = 0; i < ${#OPTION_NAMES[@]}; i++ )); do
+        if [[ ${OPTION_MULTIPLICITYS[$i]} == '*' ]]; then
+            eval ${OPTION_NAMES[$i]}=${opt_with_star_multiplicity[ ${OPTION_NAMES[$i]} ]}')'
+        fi
+    done
+
 
     # Test number of positionals arguments given.
     if [[ ${#OPTION_POSITIONALS_MULTIPLICITYS[@]} -gt 0 ]]; then
@@ -222,3 +255,15 @@ function optParse {
 }
 
 
+if [[ "$0" =~ paramparser.sh$ ]]; then
+    # Display publics functions (privates functions startswith by _).
+    awk 'BEGIN{ flag=0 }
+         {  
+         if (substr($0,1,13) == "#=== FUNCTION" && substr($0,15,1) != "_"  )
+             {flag=1} 
+         else if (substr($0,1,5) == "#====" && flag == "1" )
+             {flag=0;print$0"\n\n"}; 
+         if ( flag == "1" ) 
+            {print $0}  
+         }' $0
+fi

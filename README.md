@@ -1,12 +1,12 @@
 Paramparser
 ===========
 
-Arguments parser for bash
+The best way to parse command line arguments in BASH
 
-<table>
-    <tr>
-    <td>
-<pre> 
+
+Without paramparser :-(
+-----------------------
+```bash
 verbose=False
 output_file=""
 declare -a input_file
@@ -65,10 +65,11 @@ while [[ "$#" -gt 0 ]]; do
             shift
     esac
 done
-</pre> 
-</td>
-<td>
-<pre> 
+```
+
+With paramparser :-D
+--------------------
+```bash
 source paramparser.sh
 
 optAdd  'config' 'CONFIG_FILE' 'Input config file' '?' ':NO_CONFIG:'  
@@ -78,10 +79,7 @@ optAddPos 'output_file'  'Tabular file with first column is an id'
 optAddPos 'input_file' 'Path to output file'  '+'
 
 optParse "$@"
-</pre> 
-</td>
-</tr>
-</table>
+```
 
 
 Exemple

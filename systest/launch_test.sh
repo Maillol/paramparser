@@ -48,6 +48,19 @@ test_or_exit exemple_star-2.expected returned
 ./exemple_star.sh toto tata titi > returned
 test_or_exit exemple_star-3.expected returned
 
+# Test flag
+./exemple_flag.sh toto --enable-syslog > returned
+test_or_exit exemple_flag-1.expected returned
 
+./exemple_flag.sh toto > returned
+test_or_exit exemple_flag-2.expected returned
+
+# Test option with  multiplicity '?'
+./exemple_option.sh > returned
+test_or_exit exemple_option-1.expected returned
+
+# Test option with  multiplicity '*'
+./exemple_option.sh --output-format xml --output-filter YYY  --output-filter XXX > returned
+test_or_exit exemple_option-2.expected returned
 
 

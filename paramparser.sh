@@ -25,7 +25,7 @@ declare -a OPTION_POSITIONALS_MULTIPLICITYS
 #==============================================================================
 function optAdd {
     declare -ir i=${#OPTION_NAMES[@]}
-    OPTION_NAMES[$i]=$1
+    OPTION_NAMES[$i]=${1//_/-}
     OPTION_ARGS[$i]=$2
     OPTION_HELPS[$i]=$3
     if [[ "$4" != "?" && "$4" != "*" ]]; then
@@ -51,7 +51,7 @@ function optAdd {
 #=============================================================================
 function optAddFlag {
     declare -ir i=${#OPTION_NAMES[@]}
-    OPTION_NAMES[$i]=$1
+    OPTION_NAMES[$i]=${1//_/-}
     OPTION_ARGS[$i]=''
     OPTION_HELPS[$i]=$2
     eval $1'='false
@@ -83,7 +83,7 @@ function optAddPos {
             echo -e "\e[1;31mParamparser Programming Error:\e[0m optAddPos argument 3 expected '1', '*' or '+'." 1>&2
             exit 1;
         fi
-        OPTION_POSITIONALS_MULTIPLICITYS[$i]=$3 
+        OPTION_POSITIONALS_MULTIPLICITYS[$i]=$3
     else
         OPTION_POSITIONALS_MULTIPLICITYS[$i]='1'
     fi
@@ -184,15 +184,15 @@ function optParse {
         if [[ "${!i}" == "--help" || "${!i}" == "-h" ]]; then
             optUsage
             exit 0
-        else 
+        else
             if opt_i=$( _optSearch ${!i} ) ; then
                 var_name=${OPTION_NAMES[$opt_i]}
-                if [ -z ${OPTION_ARGS[$opt_i]} ]; then
-                    eval $var_name'=true'     
+                if [[ -z ${OPTION_ARGS[$opt_i]} ]]; then
+                    eval ${var_name//-/_}'=true'
                 else
                     (( ++i ))
                     if [[ ${OPTION_MULTIPLICITYS[ $opt_i ]} == '?' ]]; then
-                        eval $var_name"='"${!i}"'"
+                        eval ${var_name//-/_}"='"${!i}"'"
                     else
                         opt_with_star_multiplicity[ ${OPTION_NAMES[$opt_i]} ]=${opt_with_star_multiplicity[ ${OPTION_NAMES[$opt_i]} ]}"'"${!i}"' "
                     fi
@@ -213,7 +213,8 @@ function optParse {
     # Eval array for option with * multiplicity
     for (( i = 0; i < ${#OPTION_NAMES[@]}; i++ )); do
         if [[ ${OPTION_MULTIPLICITYS[$i]} == '*' ]]; then
-            eval ${OPTION_NAMES[$i]}=${opt_with_star_multiplicity[ ${OPTION_NAMES[$i]} ]}')'
+            var_name=${OPTION_NAMES[$i]}
+            eval ${var_name//-/_}=${opt_with_star_multiplicity[ ${OPTION_NAMES[$i]} ]}')'
         fi
     done
 

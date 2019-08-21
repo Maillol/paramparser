@@ -12,7 +12,7 @@ declare -a OPTION_POSITIONALS_MULTIPLICITYS
 #=== FUNCTION optAdd ==========================================================
 # USAGE: optAdd name args help multiplicity [defaut]
 # DESCRIPTION: add option to parseur.
-#             
+#
 # PARAMETERS:
 #    name - Name of option without '--' prefix
 #    args - Name of args displaying in generated help
@@ -20,7 +20,7 @@ declare -a OPTION_POSITIONALS_MULTIPLICITYS
 #    multiplicity - if multiplicity is '?' the <name> variable will be created
 #                   if multiplicity is '*' the <name> array will be created
 #                   and the commande line will contain several time this option.
-#    defaut - default value of the variable <name> (ignored if multiplicity is 
+#    defaut - default value of the variable <name> (ignored if multiplicity is
 #             '*')
 #==============================================================================
 function optAdd {
@@ -44,7 +44,7 @@ function optAdd {
 #=== FUNCTION optAddFlag =====================================================
 # USAGE: optAddFlag opt_name opt_help
 # DESCRIPTION: add flag option to parseur. A flag option is true or false
-#             
+#
 # PARAMETERS:
 #    opt_name - Name of option without '--' prefix
 #    opt_help - in line help.
@@ -65,14 +65,14 @@ function optAddFlag {
 #    opt_name - Name of option without '--' prefix
 #    opt_help - Inline help.
 #    multiplicity - Must be '1', '+' or '*'. Default is '1'. Only the last
-#                   argument can have '+' multiplicity. 
+#                   argument can have '+' multiplicity.
 #=============================================================================
 function optAddPos {
     declare -ir i=${#OPTION_POSITIONALS_NAMES[@]}
     OPTION_POSITIONALS_NAMES[$i]=$1
     OPTION_POSITIONALS_HELPS[$i]=$2
     declare -ir prev_i=$(($i - 1))
-    
+
     if [[ "$prev_i" -ge "0" && ${OPTION_POSITIONALS_MULTIPLICITYS[$prev_i]} != '1' ]]; then
         echo -e "\e[1;31mParamparser Programming Error:\e[0m You can't add positional argument after an other with '*' or '+' multiplicity." 1>&2
         exit 1;
@@ -105,7 +105,7 @@ function optUsage {
     for (( i = 0; i < ${#OPTION_POSITIONALS_NAMES[@]}; i++ )); do
         if [[ "${OPTION_POSITIONALS_MULTIPLICITYS[ $i ]}" == "1" ]]; then
             usage="$usage ${OPTION_POSITIONALS_NAMES[$i]}"
-        else 
+        else
             if [[ "${OPTION_POSITIONALS_MULTIPLICITYS[ $i ]}" == "+" ]]; then
                 usage="$usage ${OPTION_POSITIONALS_NAMES[$i]} [${OPTION_POSITIONALS_NAMES[$i]}]..."
             else
@@ -129,7 +129,7 @@ function optUsage {
            echo -e '\n'
         done
     fi
-    
+
     if [[ "${#OPTION_NAMES[@]}" > 0 ]]; then
         echo 'OPTION'
         for (( i = 0; i < ${#OPTION_NAMES[@]}; i++ )); do
@@ -139,7 +139,7 @@ function optUsage {
         done
     fi
     echo -e '\t-h --help'
-    echo -e '\t\tDisplay this help and exit.'  
+    echo -e '\t\tDisplay this help and exit.'
 }
 
 #=== FUNCTION _optSearch =====================================================
@@ -149,7 +149,7 @@ function optUsage {
 #              if a=$( _optSearch $1 ) ; then
 #                  echo ${OPTION_HELPS[$a]};
 #              fi
-#             
+#
 # PARAMETERS:
 #    option - option with -- prefix
 #=============================================================================
@@ -164,6 +164,17 @@ function _optSearch {
     return 1
 }
 
+#=== FUNCTION _optShowErrorAndExit ===========================================
+# USAGE: _optShowErrorAndExit message
+#
+# PARAMETERS:
+#    message - The message to display on the stderr
+#=============================================================================
+function _optShowErrorAndExit {
+    echo 2>&1 "$1"
+    echo 2>&1 "try '$0 --help' for more explanation"
+    exit 1
+}
 
 function optParse {
     declare -i opt_i ;
@@ -191,6 +202,11 @@ function optParse {
                     eval ${var_name//-/_}'=true'
                 else
                     (( ++i ))
+
+                    if [[ ${i} -gt ${#} ]]; then
+                        _optShowErrorAndExit "error: option --${var_name} needs a value"
+                    fi
+
                     if [[ ${OPTION_MULTIPLICITYS[ $opt_i ]} == '?' ]]; then
                         eval ${var_name//-/_}"='"${!i}"'"
                     else
@@ -227,31 +243,27 @@ function optParse {
 
         if [[ "$last_multiplicity" == "+" ]]; then
             if [[ $nb_pos_args_given -lt ${#OPTION_POSITIONALS_MULTIPLICITYS[@]} ]]; then
-                echo 'error: Too few arguments'
-                echo "try '$0 --help' for more explanation"
-                exit 1   
+                _optShowErrorAndExit 'error: Too few arguments'
             fi
             eval "$var_name=( $pos_args )"
 
-        else 
+        else
             if [[ "$last_multiplicity" == "*" ]]; then
                     if [[ $nb_pos_args_given -lt $(( ${#OPTION_POSITIONALS_MULTIPLICITYS[@]} - 1 )) ]]; then
-                        echo 'error: Too few arguments'
-                        echo "try '$0 --help' for more explanation"
-                        exit 1   
+                        _optShowErrorAndExit 'error: Too few arguments'
                     fi
                     eval "$var_name=( $pos_args )"
 
-            else 
+            else
                     if [[ "$last_multiplicity" == "1" ]]; then
                         if [[ $nb_pos_args_given != ${#OPTION_POSITIONALS_MULTIPLICITYS[@]} ]]; then
-                            echo 'error: Wrong number of arguments'
-                            echo "try '$0 --help' for more explanation"
-                            exit 1   
+                            _optShowErrorAndExit 'error: Wrong number of arguments'
                         fi
                     fi
            fi
         fi
+    elif [[ $nb_pos_args_given -gt 0 ]]; then
+        _optShowErrorAndExit 'error: Wrong number of arguments'
     fi
 }
 
@@ -259,8 +271,8 @@ function optParse {
 if [[ "$0" =~ paramparser.sh$ ]]; then
     # Display publics functions (privates functions startswith by _).
     awk -v func_name="$1" 'BEGIN{ flag=0 }
-         {  
-         if (substr($0,1,13) == "#=== FUNCTION" && 
+         {
+         if (substr($0,1,13) == "#=== FUNCTION" &&
              substr($0,15,1) != "_" )
             {
             if ( func_name == "" )
@@ -270,10 +282,9 @@ if [[ "$0" =~ paramparser.sh$ ]]; then
                 {flag="1"}
             }
          else if (substr($0,1,5) == "#====" && flag == "1" )
-             {flag=0;print$0"\n\n"}; 
-         if ( flag == "1" ) 
-            {print $0}  
-         }' $0        
+             {flag=0;print$0"\n\n"};
+         if ( flag == "1" )
+            {print $0}
+         }' $0
 fi
-
 

@@ -1,0 +1,11 @@
+USAGE
+	example_subcommand.sh prepare tea [--color COLOR]
+
+
+OPTIONS
+	--color COLOR
+		red, yellow, green or black
+
+
+	-h --help
+		Display this help and exit.

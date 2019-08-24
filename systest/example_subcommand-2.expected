@@ -1,0 +1,15 @@
+USAGE
+	example_subcommand.sh prepare <command>
+
+
+OPTIONS
+	-h --help
+		Display this help and exit.
+
+COMMANDS
+	tea
+		Prepare a tea
+
+
+	coffe
+		Prepare a coffe

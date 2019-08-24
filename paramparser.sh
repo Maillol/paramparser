@@ -7,6 +7,10 @@ declare -a OPTION_MULTIPLICITYS
 declare -a OPTION_POSITIONALS_NAMES
 declare -a OPTION_POSITIONALS_HELPS
 declare -a OPTION_POSITIONALS_MULTIPLICITYS
+declare -a OPTION_COMMAND_NAMES
+declare -a OPTION_COMMAND_HELPS
+declare -a OPTION_COMMAND_FUNCS
+declare -a OPTION_CURRENT_COMMAND
 
 
 #=== FUNCTION optAdd ==========================================================
@@ -89,18 +93,42 @@ function optAddPos {
     fi
 }
 
+#=== FUNCTION optAddCommand ==================================================
+# USAGE: optAddCommand function command_help [command_name]
+# DESCRIPTION: Add a subcommand to parser.
+#
+# PARAMETERS:
+#    function - The name of function to call
+#    command_help - Inline help about the command
+#    command_name - Use this option if you want a different name than the
+#        function name
+#=============================================================================
+function optAddCommand {
+    declare -ir i=${#OPTION_COMMAND_NAMES[@]}
+    OPTION_COMMAND_FUNCS[$i]=$1
+    OPTION_COMMAND_HELPS[$i]=$2
+    OPTION_COMMAND_NAMES[$i]=${3-$1}
+}
+
+
 #=== FUNCTION optUsage =======================================================
 # USAGE: optUsage
 # DESCRIPTION: Display Usage regarding optAdd call
 #=============================================================================
 function optUsage {
     declare -i i ;
-    declare usage="["
+    declare usage="${0##*/} "
 
-    for (( i = 0; i < ${#OPTION_NAMES[@]}; i++ )); do
-        usage="$usage --${OPTION_NAMES[$i]}"
+    for (( i = 0; i < ${#OPTION_CURRENT_COMMAND[@]}; i++ )); do
+        usage="$usage ${OPTION_CURRENT_COMMAND[$i]} "
     done
-    usage="$usage ] "
+
+
+    if [[ "${#OPTION_NAMES[@]}" -gt 0 ]]; then
+        for (( i = 0; i < ${#OPTION_NAMES[@]}; i++ )); do
+            usage="$usage [--${OPTION_NAMES[$i]} ${OPTION_ARGS[$i]}]"
+        done
+    fi
 
     for (( i = 0; i < ${#OPTION_POSITIONALS_NAMES[@]}; i++ )); do
         if [[ "${OPTION_POSITIONALS_MULTIPLICITYS[ $i ]}" == "1" ]]; then
@@ -116,12 +144,15 @@ function optUsage {
         fi
     done
 
+    if [[ "${#OPTION_COMMAND_NAMES[@]}" -gt 0 ]]; then
+        usage="$usage <command> "
+    fi
 
     echo 'USAGE'
     echo -e '\t'$usage
     echo -e '\n'
 
-    if [[ "${#OPTION_POSITIONALS_NAMES[@]}" > 0 ]]; then
+    if [[ "${#OPTION_POSITIONALS_NAMES[@]}" -gt 0 ]]; then
         echo 'POSITIONALS ARGUMENTS'
         for (( i = 0; i < ${#OPTION_POSITIONALS_NAMES[@]}; i++ )); do
            echo -e '\t'${OPTION_POSITIONALS_NAMES[$i]}
@@ -130,8 +161,8 @@ function optUsage {
         done
     fi
 
-    if [[ "${#OPTION_NAMES[@]}" > 0 ]]; then
-        echo 'OPTION'
+    echo 'OPTIONS'
+    if [[ "${#OPTION_NAMES[@]}" -gt 0 ]]; then
         for (( i = 0; i < ${#OPTION_NAMES[@]}; i++ )); do
             echo -e '\t--'${OPTION_NAMES[$i]}' '${OPTION_ARGS[$i]}
             echo -e '\t\t'${OPTION_HELPS[$i]}
@@ -140,15 +171,29 @@ function optUsage {
     fi
     echo -e '\t-h --help'
     echo -e '\t\tDisplay this help and exit.'
+
+    if [[ "${#OPTION_COMMAND_NAMES[@]}" -gt 0 ]]; then
+        echo -e '\nCOMMANDS'
+        for (( i = 0; i < (( ${#OPTION_COMMAND_NAMES[@]} - 1 )); i++ )); do
+            echo -e '\t'${OPTION_COMMAND_NAMES[$i]}
+            echo -e '\t\t'${OPTION_COMMAND_HELPS[$i]}
+            echo -e '\n'
+        done
+        echo -e '\t'${OPTION_COMMAND_NAMES[$i]}
+        echo -e '\t\t'${OPTION_COMMAND_HELPS[$i]}
+    fi
 }
 
 #=== FUNCTION _optSearch =====================================================
 # USAGE: _optSearch option
-# DESCRIPTION: search option in OPTION_NAMES array return 1 if element isn't
-#              found
-#              if a=$( _optSearch $1 ) ; then
-#                  echo ${OPTION_HELPS[$a]};
-#              fi
+# DESCRIPTION: search option in OPTION_NAMES array and display the
+#              indice. The exit status is 1 if the option isn't found
+#              else 0
+#
+#              example:
+#                  if a=$( _optSearch $1 ) ; then
+#                      echo ${OPTION_HELPS[$a]};
+#                  fi
 #
 # PARAMETERS:
 #    option - option with -- prefix
@@ -157,6 +202,26 @@ function _optSearch {
     declare i ;
     for i in ${!OPTION_NAMES[@]} ;do
         if [[ --${OPTION_NAMES[$i]} = "$1" ]]; then
+            echo $i
+            return 0
+        fi
+    done
+    return 1
+}
+
+#=== FUNCTION _optCommandSearch ==============================================
+# USAGE: _optCommandSearch command_name
+# DESCRIPTION: search option in OPTION_COMMAND_NAMES array and display the
+#              indice. The exit status is 1 if the command_name isn't found
+#              else 0
+#
+# PARAMETERS:
+#    command - A command name
+#=============================================================================
+function _optCommandSearch {
+    declare i ;
+    for i in ${!OPTION_COMMAND_NAMES[@]} ;do
+        if [[ ${OPTION_COMMAND_NAMES[$i]} = "$1" ]]; then
             echo $i
             return 0
         fi
@@ -176,6 +241,41 @@ function _optShowErrorAndExit {
     exit 1
 }
 
+#=== FUNCTION _optParseCommand ===============================================
+# USAGE: _optParseCommand
+#
+# DESCRIPTION: Parse command if optAddCommand has been used reading
+#              $@ variable
+#=============================================================================
+function _optParseCommand {
+    declare -i i=0
+    declare -i cmd_i=0
+    declare command_func
+    if [[ ${#OPTION_COMMAND_NAMES[@]} -gt 0 ]]; then
+        if [[ ${#} -gt 0 ]]; then
+            if [[ "${1}" == "--help" || "${1}" == "-h" ]]; then
+                optUsage
+                exit 0
+            else
+                if cmd_i=$( _optCommandSearch ${1} ) ; then
+                    OPTION_CURRENT_COMMAND+=(${1})
+                    command_func=${OPTION_COMMAND_FUNCS[$cmd_i]}
+                    OPTION_COMMAND_NAMES=()
+                    OPTION_COMMAND_FUNCS=()
+                    shift
+                    $command_func "${@}"
+                    exit $?
+                else
+                    _optShowErrorAndExit "'${1}' is not a command (available commands: ${OPTION_COMMAND_NAMES[*]})"
+                fi
+            fi
+        else
+            optUsage
+            exit 0
+        fi
+    fi
+}
+
 function optParse {
     declare -i opt_i ;
     declare -i i=0 ;
@@ -184,6 +284,8 @@ function optParse {
     declare pos_args=''
     declare var_name ;
     declare -A opt_with_star_multiplicity
+
+    _optParseCommand "${@}"
 
     for (( i = 0; i < ${#OPTION_NAMES[@]}; i++ )); do
         if [[ ${OPTION_MULTIPLICITYS[$i]} == '*' ]]; then

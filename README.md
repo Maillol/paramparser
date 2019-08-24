@@ -3,107 +3,84 @@ Paramparser
 
 The best way to parse command line arguments in BASH
 
+Use paramparser to write a command-line interfaces. You only define optional and requiered arguments and 
+paramparser will store parsed argument value in the generated bash variable. 
+paramparser also generates help and error message when the users provide a wrong command.
 
-Without paramparser :-(
------------------------
-```bash
-verbose=False
-output_file=""
-declare -a input_file
-config=":NO_CONFIG:"
-col='*'
-while [[ "$#" -gt 0 ]]; do
-    case $1 in
-        --config)
-            if [[ -z "$2" ]]; then
-                echo "Error config has not value" 
-            fi
-            config="$2"
-            shift 2
-            ;;
 
-        --col)
-            if [[ -z "$2" ]]; then
-                echo "Error col has not value" 
-            fi
-            col="$2"
-            shift 2
-            ;;
+How to Install paramparser
+==========================
 
-        --verbose)
-            verbose=True
-            shift
-            ;;
-        --help)
-            echo -e 'USAGE'
-            echo -e '	[ --config --col --verbose ] output_file input_file [input_file]...\n\n'
-            echo -e 'POSITIONALS ARGUMENTS'
-            echo -e '	output_file'
-            echo -e '		Tabular file with first column is an id\n\n'
-            echo -e '	input_file'
-            echo -e '		Path to output file\n\n'
-            echo -e 'OPTION'
-            echo -e '	--config CONFIG_FILE'
-            echo -e '		Input config file\n\n'
-            echo -e '	--col NUM_COLUMN'
-            echo -e '		Display this column\n\n'
-            echo -e '	--verbose '
-            echo -e '		Displays more descriptive information than the default output.\n\n'
-            echo -e '	-h --help'
-            echo -e '		Display this help and exit.'
-            exit
-            ;;
-        --*)
-            # unknown option 
-            ;;
-        *) 
-            if [[ -z "$output_file" ]]; then
-                output_file="$1"
-            else
-                input_file[${#input_file[@]}]="$1"
-            fi
-            shift
-    esac
-done
+System installation
+-------------------
+
+```
+sudo mkdir -p /usr/lib/bash
+sudo curl https://raw.githubusercontent.com/Maillol/paramparser/master/paramparser.sh  --output /usr/lib/bash/paramparser.sh
 ```
 
-With paramparser :-D
---------------------
+User installation
+-----------------
+
+```
+mkdir -p ~/.local/lib/bash
+curl https://raw.githubusercontent.com/Maillol/paramparser/master/paramparser.sh  --output ~/.local/lib/bash/paramparser.sh
+```
+
+Example using paramparser :-D
+=============================
 ```bash
 source paramparser.sh
 
-optAdd  'config' 'CONFIG_FILE' 'Input config file' '?' ':NO_CONFIG:'  
+optAdd  'config' 'CONFIG_FILE' 'Input config file' '?' ':NO_CONFIG:'
 optAdd  'col' 'NUM_COLUMN' 'Display this column'   '*'
 optAddFlag 'verbose' 'Displays more descriptive information than the default output.'
 optAddPos 'output_file'  'Tabular file with first column is an id'
 optAddPos 'input_file' 'Path to output file'  '+'
 
 optParse "$@"
+
+# paramparser will generate bash variable containing the parsing parameters for you.
+echo 'config:' $config
+echo 'col:' ${col[@]}
+echo 'verbose:' $verbose
+echo 'output_file:' $output_file
+echo 'input_file:' "${input_file[@]}"
 ```
 
 
-Exemple
-=======
+Tutorial
+========
 
-## 1. Include paramparser.sh
+## 1. paramparser.sh is included.
 
 ```bash
-source paramparser.sh  
+source paramparser.sh
 ```
 
-## 2. Adding optionals arguments and positionals arguments
+## 2. Optionals and positionals arguments are defined.
 
 ```bash
-# Add optionals arguments.
-optAdd  'config' 'CONFIG_FILE' 'Input config file' ''
-optAddFlag 'verbose' 'Displays more descriptive information than the default output.'  
+# Add optionals arguments, inline help and cardinality.
+# Use optAdd to add option.
+# optAdd take 5 parameters:
+#   1 - The name of bash variable to create
+#   2 - The name of parameter to display in the help
+#   3 - The inline help to display
+#   4 - The command-line parameters can be present ('?' one or zero) ('*' zero or several) time
+#   5 - The default value to store in the variable to create.
 
-# Add positionals arguments.
+optAdd  'config' 'CONFIG_FILE' 'Input config file' '?' ':NO_CONFIG:'
+
+# optAddFlag is like optAdd but the stored value in the created variable will be true or false.
+optAddFlag 'verbose' 'Displays more descriptive information than the default output.'
+
+# Add positionals arguments
 optAddPos 'output_file'  'Tabular file with first column is an id'
-optAddPos 'input_file' 'Path to output file'  '+'                    
+optAddPos 'input_file' 'Path to input files'  '+'  # '+' means one or multiple input files
 ```
 
-## 3. Getting user parameters
+## 3. User parameters are parsed.
 
 ```bash
 # Use optParse function to parse users arguments.
@@ -119,9 +96,9 @@ echo 'last positionals arguments  :' "${input_file[@]}"
 ## 4. It is done ! Try your program :-)
 
 ```
-$ ./exemple.sh  -h
+$ ./example.sh  -h
 USAGE
-	[ --config --verbose ] output_file input_file [input_file]...
+	example.sh [--config] [--verbose] output_file input_file [input_file]...
 
 
 POSITIONALS ARGUMENTS
@@ -133,22 +110,96 @@ POSITIONALS ARGUMENTS
 		Path to output file
 
 
-OPTION
+OPTIONS
 	--config CONFIG_FILE
 		Input config file
 
 
-	--verbose 
+	--verbose
 		Displays more descriptive information than the default output.
 
 
 	-h --help
 		Display this help and exit.
 ```
+
 ```
-$ ./exemple.sh  --config my_config  foo  bar1 bar2
+$ ./example.sh  --config my_config  foo  bar1 bar2
 config : my_config
 verbose : false
 positional argument 1 : foo
 last positionals arguments  : bar1 bar2
+```
+
+
+Example with Sub-commands
+=========================
+
+```
+#!/bin/bash
+
+source paramparser.sh
+
+optAddCommand prepare 'Use this command to prepare a drink'
+optAddCommand serve-drink-in-the-right-way 'Use this command to serve a drink' 'serve'
+
+
+function prepare {
+    optAddCommand prepare-tea 'Prepare a tea' 'tea'
+    optAddCommand prepare-coffe 'Prepare a coffe' 'coffe'
+    optParse $@
+}
+
+
+function prepare-coffe {
+    optAddFlag 'cold' 'Create a cold coffe'
+    optParse $@
+
+    echo 'cold :' $cold
+}
+
+
+function prepare-tea {
+    optAdd 'color' 'COLOR' 'red, yellow, green or black' '?' 'green'
+    optParse $@
+
+    echo 'color :' $color
+}
+
+
+function serve-drink-in-the-right-way {
+    optAddPos 'customer' 'The name of the customer' '+'
+    optParse $@
+
+    echo 'customer :' ${customer[@]}
+}
+
+
+optParse $@
+```
+
+How provide paramparser in the script using paramparser
+=======================================================
+
+
+```
+if [[ -f ~/.local/lib/bash/paramparser.sh ]]; then
+    source ~/.local/lib/bash/paramparser.sh
+elif [[ -f /usr/lib/bash/paramparser.sh ]]; then
+    source /usr/lib/bash/paramparser.sh
+else
+    mkdir -p ~/.local/lib/bash
+    curl https://raw.githubusercontent.com/Maillol/paramparser/master/paramparser.sh  --output ~/.sources/paramparser.sh
+    source ~/.sources/paramparser.sh
+fi
+```
+
+
+Documentation
+=============
+
+You can read the generated documentation executing paramparser.sh
+
+```
+bash paramparser.sh
 ```

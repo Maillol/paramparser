@@ -16,51 +16,75 @@ function test_or_exit {
 }
 
 # Test multiplicity '1'
-./exemple_1.sh toto > returned
-test_or_exit exemple_1-1or3.expected returned
+./example_1.sh toto > returned
+test_or_exit example_1-1or3.expected returned
 
-./exemple_1.sh toto tata titi > returned
-test_or_exit exemple_1-1or3.expected returned
+./example_1.sh toto tata titi > returned
+test_or_exit example_1-1or3.expected returned
 
-./exemple_1.sh toto tata > returned
-test_or_exit exemple_1-2.expected returned
+./example_1.sh toto tata > returned
+test_or_exit example_1-2.expected returned
 
 # Test multiplicity '+'
-./exemple_plus.sh toto > returned
-test_or_exit exemple_plus-1.expected returned
+./example_plus.sh toto > returned
+test_or_exit example_plus-1.expected returned
 
-./exemple_plus.sh toto tata > returned
-test_or_exit exemple_plus-2.expected returned
+./example_plus.sh toto tata > returned
+test_or_exit example_plus-2.expected returned
 
-./exemple_plus.sh toto tata titi > returned
-test_or_exit exemple_plus-3.expected returned
+./example_plus.sh toto tata titi > returned
+test_or_exit example_plus-3.expected returned
 
 # Test multiplicity '*'
-./exemple_star.sh > returned
-test_or_exit exemple_star-0.expected returned
+./example_star.sh > returned
+test_or_exit example_star-0.expected returned
 
-./exemple_star.sh toto > returned
-test_or_exit exemple_star-1.expected returned
+./example_star.sh toto > returned
+test_or_exit example_star-1.expected returned
 
-./exemple_star.sh toto tata > returned
-test_or_exit exemple_star-2.expected returned
+./example_star.sh toto tata > returned
+test_or_exit example_star-2.expected returned
 
-./exemple_star.sh toto tata titi > returned
-test_or_exit exemple_star-3.expected returned
+./example_star.sh toto tata titi > returned
+test_or_exit example_star-3.expected returned
 
 # Test flag
-./exemple_flag.sh toto --enable-syslog > returned
-test_or_exit exemple_flag-1.expected returned
+./example_flag.sh toto --enable-syslog > returned
+test_or_exit example_flag-1.expected returned
 
-./exemple_flag.sh toto > returned
-test_or_exit exemple_flag-2.expected returned
+./example_flag.sh toto > returned
+test_or_exit example_flag-2.expected returned
 
 # Test option with  multiplicity '?'
-./exemple_option.sh > returned
-test_or_exit exemple_option-1.expected returned
+./example_option.sh > returned
+test_or_exit example_option-1.expected returned
 
 # Test option with  multiplicity '*'
-./exemple_option.sh --output-format xml --output-filter YYY  --output-filter XXX > returned
-test_or_exit exemple_option-2.expected returned
+./example_option.sh --output-format xml --output-filter YYY  --output-filter XXX > returned
+test_or_exit example_option-2.expected returned
+
+# Test sub command
+./example_subcommand.sh > returned
+test_or_exit example_subcommand-1.expected returned
+
+./example_subcommand.sh prepare --help > returned
+test_or_exit example_subcommand-2.expected returned
+
+./example_subcommand.sh prepare tea --help > returned
+test_or_exit example_subcommand-3.expected returned
+
+./example_subcommand.sh prepare coffe --help > returned
+test_or_exit example_subcommand-4.expected returned
+
+./example_subcommand.sh serve --help > returned
+test_or_exit example_subcommand-5.expected returned
+
+./example_subcommand.sh prepare coffe --cold > returned
+test_or_exit example_subcommand-6.expected returned
+
+./example_subcommand.sh prepare coffe > returned
+test_or_exit example_subcommand-7.expected returned
+
+
 
 

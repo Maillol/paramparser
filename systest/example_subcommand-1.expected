@@ -1,0 +1,15 @@
+USAGE
+	example_subcommand.sh <command>
+
+
+OPTIONS
+	-h --help
+		Display this help and exit.
+
+COMMANDS
+	prepare
+		Use this command to prepare a drink
+
+
+	serve
+		Use this command to serve a drink

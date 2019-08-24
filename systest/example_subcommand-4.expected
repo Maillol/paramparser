@@ -1,0 +1,11 @@
+USAGE
+	example_subcommand.sh prepare coffe [--cold ]
+
+
+OPTIONS
+	--cold 
+		Create a cold coffe
+
+
+	-h --help
+		Display this help and exit.

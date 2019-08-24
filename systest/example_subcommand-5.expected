@@ -1,0 +1,12 @@
+USAGE
+	example_subcommand.sh serve customer [customer]...
+
+
+POSITIONALS ARGUMENTS
+	customer
+		The name of the customer
+
+
+OPTIONS
+	-h --help
+		Display this help and exit.

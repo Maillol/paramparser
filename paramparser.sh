@@ -201,7 +201,7 @@ function optUsage {
 function _optSearch {
     declare i ;
     for i in ${!OPTION_NAMES[@]} ;do
-        if [[ --${OPTION_NAMES[$i]} = "$1" ]]; then
+        if [[ --${OPTION_NAMES[$i]} = "${1%%=*}" ]]; then
             echo $i
             return 0
         fi
@@ -283,6 +283,7 @@ function optParse {
     declare -i nb_pos_args_given=0 ;
     declare pos_args=''
     declare var_name ;
+    declare var_value
     declare -A opt_with_star_multiplicity
 
     _optParseCommand "${@}"
@@ -303,16 +304,20 @@ function optParse {
                 if [[ -z ${OPTION_ARGS[$opt_i]} ]]; then
                     eval ${var_name//-/_}'=true'
                 else
-                    (( ++i ))
-
-                    if [[ ${i} -gt ${#} ]]; then
-                        _optShowErrorAndExit "error: option --${var_name} needs a value"
+                    if [[ ${!i} =~ = ]]; then
+                        var_value=${!i#*=}
+                    else
+                        (( ++i ))
+                        if [[ ${i} -gt ${#} ]]; then
+                            _optShowErrorAndExit "error: option --${var_name} needs a value"
+                        fi
+                        var_value=${!i}
                     fi
 
                     if [[ ${OPTION_MULTIPLICITYS[ $opt_i ]} == '?' ]]; then
-                        eval ${var_name//-/_}"='"${!i}"'"
+                        eval ${var_name//-/_}"='"${var_value}"'"
                     else
-                        opt_with_star_multiplicity[ ${OPTION_NAMES[$opt_i]} ]=${opt_with_star_multiplicity[ ${OPTION_NAMES[$opt_i]} ]}"'"${!i}"' "
+                        opt_with_star_multiplicity[ ${OPTION_NAMES[$opt_i]} ]=${opt_with_star_multiplicity[ ${OPTION_NAMES[$opt_i]} ]}"'"${var_value}"' "
                     fi
                 fi
             else

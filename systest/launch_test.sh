@@ -63,6 +63,11 @@ test_or_exit example_option-1.expected returned
 ./example_option.sh --output-format xml --output-filter YYY  --output-filter XXX > returned
 test_or_exit example_option-2.expected returned
 
+# Test option with =-style long options'
+./example_option.sh --output-format=xml --output-filter=YYY  --output-filter=XXX > returned
+test_or_exit example_option-2.expected returned
+
+
 # Test sub command
 ./example_subcommand.sh > returned
 test_or_exit example_subcommand-1.expected returned

@@ -111,6 +111,145 @@ function optAddCommand {
 }
 
 
+declare -a ALL_CMDS=()
+declare -A CMD_TREE=()
+declare -A OPT_FROM_CMD=()
+declare -a MEMO=()
+declare -i I_MEMO=0
+
+
+
+function _sum_memo {
+    declare -i result=0
+    declare -i i=0
+    declare -i stop=${1--1}
+
+    for e in ${MEMO[@]}; do
+        if [[ $i -eq $stop ]]; then
+            break
+        fi
+        (( i += 1 ))
+        (( result += $e ))
+    done
+    echo $result
+}
+
+
+function  _get_node_from_level {
+    declare -i start=$(_sum_memo $1)
+    declare -i nb_element=${MEMO[$1]}
+    echo ${ALL_CMDS[@]:$start:$nb_element} 
+}
+
+
+function _build_tree {
+    declare -i offset=-1
+ 
+    CMD_TREE['$']="$(_get_node_from_level $i)"
+    for (( i = 0; i < ${#MEMO[@]}; i++ )); do
+        declare -a nodes=($(_get_node_from_level $i))
+        (( offset += ${#nodes[@]} ))
+        for (( j = 0; j < ${#nodes[@]}; j++ )); do
+            CMD_TREE[${nodes[$j]}]="$( _get_node_from_level $(( $offset + $j )) )"
+        done
+    done
+}
+
+
+function _optCompspec {
+    declare -i nb_exec=${1:-0}
+
+    if [[ ${#OPTION_COMMAND_FUNCS[@]} -ne 0 ]]; then
+
+        if [[ $nb_exec -eq 0 ]]; then
+            declare current_cmd_exec=':__top_level_cmd__:'    
+            MEMO+=(${#OPTION_COMMAND_NAMES[@]})
+        else
+            declare current_cmd_exec="${OPTION_COMMAND_NAMES[0]}"
+            MEMO+=($(( ${#OPTION_COMMAND_NAMES[@]} - ($( _sum_memo ) - $nb_exec ))))
+        fi
+
+        function optParse() {
+
+            _optCompspec $(( nb_exec + 1 ))
+            _build_tree
+            displayOptCompspec
+            exit
+        }
+
+        if [[ ${#ALL_CMDS[@]} -gt 0 ]]; then
+            OPT_FROM_CMD[${ALL_CMDS[-1]}]=${OPTION_NAMES[@]}
+        else
+            OPT_FROM_CMD['$']=${OPTION_NAMES[@]}
+        fi
+
+        cmd=${OPTION_COMMAND_FUNCS[0]}
+        cmd_name=${OPTION_COMMAND_NAMES[0]}
+
+        ALL_CMDS+=("${cmd_name}")
+
+        OPTION_NAMES=()
+        OPTION_ARGS=()
+        OPTION_HELPS=()
+        OPTION_MULTIPLICITYS=()
+        OPTION_POSITIONALS_NAMES=()
+        OPTION_POSITIONALS_HELPS=()
+        OPTION_POSITIONALS_MULTIPLICITYS=()
+        OPTION_COMMAND_NAMES=("${OPTION_COMMAND_NAMES[@]:1}")
+        OPTION_COMMAND_FUNCS=("${OPTION_COMMAND_FUNCS[@]:1}")
+
+        $cmd
+    fi
+}
+
+
+#=== FUNCTION displayOptCompspec =============================================
+# USAGE: displayOptCompspec
+#=============================================================================
+function displayOptCompspec {
+    declare k;
+
+    echo 'declare -A CMD_TREE'
+    echo 'declare -A OPT_FROM_CMD'
+    for k in ${!CMD_TREE[@]}; do
+        echo 'CMD_TREE["'$k'"]="'${CMD_TREE[$k]}'"'
+        if [[ ! -z ${OPT_FROM_CMD[$k]} ]]; then
+            echo 'OPT_FROM_CMD["'$k'"]="--'${OPT_FROM_CMD[$k]}'"'
+        else
+            echo 'OPT_FROM_CMD["'$k'"]=""'
+        fi
+    done
+    echo '
+        _dothis_completions()
+        {
+            declare next_cmds=""
+            declare next_opts=""
+            declare root_of_tree=true
+
+            for word in ${COMP_WORDS[@]}; do
+                if [[ ${CMD_TREE["${word}"]+next-cmd-found} == next-cmd-found ]]; then
+                    next_cmds=${CMD_TREE["${word}"]}
+                    next_opts=${OPT_FROM_CMD["${word}"]}
+                    root_of_tree=false
+                fi
+            done
+
+            if $root_of_tree; then
+                next_cmds=${CMD_TREE['"'"'$'"'"']}
+                next_opts=${OPT_FROM_CMD['"'"'$'"'"']}
+            fi
+
+            if [[ ${COMP_WORDS[$COMP_CWORD]:0:2} == '--' ]]; then
+                COMPREPLY=($(compgen -W "${next_opts[@]}" -- "${COMP_WORDS[$COMP_CWORD]}"))
+            else
+                COMPREPLY=($(compgen -W "${next_cmds[@]}" -- "${COMP_WORDS[$COMP_CWORD]}"))
+            fi
+        }
+        complete -F _dothis_completions '"$0"'
+    '
+}
+
+
 #=== FUNCTION optUsage =======================================================
 # USAGE: optUsage
 # DESCRIPTION: Display Usage regarding optAdd call
@@ -171,6 +310,9 @@ function optUsage {
     fi
     echo -e '\t-h --help'
     echo -e '\t\tDisplay this help and exit.'
+    echo -e '\n'
+    echo -e '\t--compspec'
+    echo -e '\t\tDisplay the script with completion specification for bash completion.'
 
     if [[ "${#OPTION_COMMAND_NAMES[@]}" -gt 0 ]]; then
         echo -e '\nCOMMANDS'
@@ -256,6 +398,9 @@ function _optParseCommand {
             if [[ "${1}" == "--help" || "${1}" == "-h" ]]; then
                 optUsage
                 exit 0
+            elif [[ "${1}" == "--compspec" ]]; then
+                _optCompspec
+                exit 0
             else
                 if cmd_i=$( _optCommandSearch ${1} ) ; then
                     OPTION_CURRENT_COMMAND+=(${1})
@@ -275,6 +420,7 @@ function _optParseCommand {
         fi
     fi
 }
+
 
 function optParse {
     declare -i opt_i ;
@@ -297,6 +443,19 @@ function optParse {
     for (( i = 1; i <= ${#}; i++ )); do
         if [[ "${!i}" == "--help" || "${!i}" == "-h" ]]; then
             optUsage
+            exit 0
+        elif [[ "${!i}" == "--compspec" ]]; then
+            echo '
+                _dothis_completions()
+                {
+                    if [[ ${COMP_WORDS[$COMP_CWORD]:0:2} == '--' ]]; then
+                        COMPREPLY=($(compgen -W "'${OPTION_NAMES[@]/#/--}'" -- "${COMP_WORDS[$COMP_CWORD]}"))
+                    else
+                        COMPREPLY=($(compgen -f))
+                    fi
+                }
+                complete -F _dothis_completions '"$0"'
+            '
             exit 0
         else
             if opt_i=$( _optSearch ${!i} ) ; then

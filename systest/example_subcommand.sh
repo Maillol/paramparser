@@ -2,20 +2,26 @@
 
 source ../paramparser.sh
 
-optAddCommand prepare 'Use this command to prepare a drink'
+optAddCommand prepare 'Use this command to prepare a drink or meat'
 optAddCommand serve-drink-in-the-right-way 'Use this command to serve a drink' 'serve'
 
 
 function prepare {
+    optAddCommand prepare-drink 'Prepare a coffe or tea'
+    optParse "$@"
+}
+
+
+function prepare-drink {
     optAddCommand prepare-tea 'Prepare a tea' 'tea'
     optAddCommand prepare-coffe 'Prepare a coffe' 'coffe'
-    optParse $@
+    optParse "$@"
 }
 
 
 function prepare-coffe {
     optAddFlag 'cold' 'Create a cold coffe'
-    optParse $@
+    optParse "$@"
 
     echo 'cold :' $cold
 }
@@ -23,7 +29,7 @@ function prepare-coffe {
 
 function prepare-tea {
     optAdd 'color' 'COLOR' 'red, yellow, green or black' '?' 'green'
-    optParse $@
+    optParse "$@"
 
     echo 'color :' $color
 }
@@ -31,10 +37,10 @@ function prepare-tea {
 
 function serve-drink-in-the-right-way {
     optAddPos 'customer' 'The name of the customer' '+'
-    optParse $@
+    optParse "$@"
 
     echo 'customer :' ${customer[@]}
 }
 
 
-optParse $@
+optParse "$@"
